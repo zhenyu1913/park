@@ -2,6 +2,8 @@ package serialPort;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.io.File;
+import java.io.FileInputStream;
 import java.util.ArrayList;
 
 import javax.swing.*;
@@ -21,10 +23,19 @@ public class Main implements ActionListener{
 	JTextArea SPKMessageField;
 	JButton buttonSendSPK;
 	JTextField fileField;
+	JTextArea sendField;
 	JButton buttonOpenFile;
 	JButton buttonSendFile;
+	JTextField addrField;
+	JLabel fileLeft;
+	Thread sendThread;
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
+		try {
+			UIManager.setLookAndFeel("com.sun.java.swing.plaf.nimbus.NimbusLookAndFeel");
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
 		new Main().go();
 	}
 	
@@ -36,6 +47,10 @@ public class Main implements ActionListener{
 		JPanel panelRelay = new JPanel();
 		JPanel panelSendDisplayMessage = new JPanel();
 		JPanel panelSPKmessage = new JPanel();
+
+		ParkingProtocol.setMainHandle(this);
+		
+		panelSerial.setLayout(new BoxLayout(panelSerial, BoxLayout.Y_AXIS));
 		
 		ArrayList<String> list =  SerialTool.findPort();
 		portArray = new String[list.size()];
@@ -45,38 +60,99 @@ public class Main implements ActionListener{
 		buttonOpenPort.addActionListener(this);
 		panelSerial.add(comboBoxPortNum);
 		panelSerial.add(buttonOpenPort);
+
+		buttonRelay1 = new JButton("触发继电器1");
+		buttonRelay2 = new JButton("触发继电器2");
+		panelSerial.add(buttonRelay1);
+		panelSerial.add(buttonRelay2);
+		
+		addrField = new JTextField(2);
+		addrField.setText("1");
+		JLabel labelAddr = new JLabel("地址");
+		panelSerial.add(labelAddr);
+		panelSerial.add(addrField);
+		
+		JPanel panelMessage = new JPanel();
+		panelMessage.setLayout(new BoxLayout(panelMessage, BoxLayout.Y_AXIS));
+//		panelMessage.setMaximumSize(new Dimension(50, 50));
 		
 		displayMessageField = new JTextArea(5,20);
 		buttonSendDisplay = new JButton("发送显示");
 		panelSendDisplayMessage.add(displayMessageField);
 		panelSendDisplayMessage.add(buttonSendDisplay);
 
-		buttonRelay1 = new JButton("触发继电器1");
-		buttonRelay2 = new JButton("触发继电器2");
-		panelRelay.add(buttonRelay1);
-		panelRelay.add(buttonRelay2);
-
 		SPKMessageField = new JTextArea(5,20);
 		buttonSendSPK = new JButton("转发声音");
 		panelSPKmessage.add(SPKMessageField);
 		panelSPKmessage.add(buttonSendSPK);
 		
-		fileField = new JTextField(20);
+		panelMessage.add(panelSendDisplayMessage);
+		panelMessage.add(panelSPKmessage);
+
+
+		
+		fileField = new JTextField(35);
 		buttonOpenFile = new JButton("打开文件");
+		buttonOpenFile.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				// TODO Auto-generated method stub
+				int retval;
+				JFileChooser chooser = new JFileChooser();
+				retval = chooser.showOpenDialog(frame);
+	            if(retval == JFileChooser.APPROVE_OPTION) {//若成功打开
+	                File file = chooser.getSelectedFile();//得到选择的文件名
+	                fileField.setText(file.toString());
+	            }
+			}
+		});
 		buttonSendFile = new JButton("发送文件");
+		buttonSendFile.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				sendThread = new Thread(new Runnable() {
+					
+					@Override
+					public void run() {
+						// TODO Auto-generated method stub
+						fileLeft.setText("123");
+						ParkingProtocol.sendFile(fileField.getText(),Integer.parseInt(addrField.getText()) );
+					}
+				});
+				sendThread.start();
+				
+			}
+		});
+		
+		JButton buttonCloseSend = new JButton("中止发送");
+		buttonCloseSend.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				try {
+					sendThread.stop();
+				} catch (Exception e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+			}
+		});
+		
+		fileLeft = new JLabel();
 		panelFileTransmit.add(fileField);
 		panelFileTransmit.add(buttonOpenFile);
 		panelFileTransmit.add(buttonSendFile);
 		
 		frame.getContentPane().add(panelTop);
 		panelTop.add(panelSerial);
-		panelTop.add(panelSendDisplayMessage);
-		panelTop.add(panelRelay);
-		panelTop.add(panelSPKmessage);
+		panelTop.add(panelMessage);
 		panelTop.add(panelFileTransmit);
+		panelTop.add(buttonCloseSend);
+		panelTop.add(fileLeft);
 
-		
-		frame.setSize(600, 350);
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		frame.setSize(700, 350);
 		frame.setVisible(true);
 	}
 	
@@ -91,7 +167,7 @@ public class Main implements ActionListener{
 			}
 			else
 			{
-				SerialTool.closePort(sp);
+				SerialTool.close();
 				isPortOpen = false;
 				buttonOpenPort.setText("打开串口");
 			}

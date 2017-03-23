@@ -24,6 +24,7 @@ import serialException.*;
 public class SerialTool {
 	
 	private static SerialTool serialTool = null;
+	private static SerialPort port = null;
 	
 	static {
 		//在该类被ClassLoader加载时就初始化一个SerialTool对象
@@ -101,6 +102,7 @@ public class SerialTool {
                 }
                 
                 //System.out.println("Open " + portName + " sucessfully !");
+                port = serialPort;
                 return serialPort;
             
             }        
@@ -119,10 +121,10 @@ public class SerialTool {
      * 关闭串口
      * @param serialport 待关闭的串口对象
      */
-    public static void closePort(SerialPort serialPort) {
-    	if (serialPort != null) {
-    		serialPort.close();
-    		serialPort = null;
+    public static void close() {
+    	if (port != null) {
+    		port.close();
+    		port = null;
     	}
     }
     
@@ -133,13 +135,13 @@ public class SerialTool {
      * @throws SendDataToSerialPortFailure 向串口发送数据失败
      * @throws SerialPortOutputStreamCloseFailure 关闭串口对象的输出流出错
      */
-    public static void sendToPort(SerialPort serialPort, byte[] order) throws SendDataToSerialPortFailure, SerialPortOutputStreamCloseFailure {
+    public static void send(byte[] order) throws SendDataToSerialPortFailure, SerialPortOutputStreamCloseFailure {
 
     	OutputStream out = null;
     	
         try {
         	
-            out = serialPort.getOutputStream();
+            out = port.getOutputStream();
             out.write(order);
             out.flush();
             
@@ -165,14 +167,14 @@ public class SerialTool {
      * @throws ReadDataFromSerialPortFailure 从串口读取数据时出错
      * @throws SerialPortInputStreamCloseFailure 关闭串口对象输入流出错
      */
-    public static byte[] readFromPort(SerialPort serialPort) throws ReadDataFromSerialPortFailure, SerialPortInputStreamCloseFailure {
+    public static byte[] read() throws ReadDataFromSerialPortFailure, SerialPortInputStreamCloseFailure {
 
     	InputStream in = null;
         byte[] bytes = null;
 
         try {
         	
-        	in = serialPort.getInputStream();
+        	in = port.getInputStream();
         	int bufflenth = in.available();		//获取buffer里的数据长度
             
         	while (bufflenth != 0) {                             
@@ -204,7 +206,7 @@ public class SerialTool {
      * @param listener 串口监听器
      * @throws TooManyListeners 监听类对象过多
      */
-    public static void addListener(SerialPort port, SerialPortEventListener listener) throws TooManyListeners {
+    public static void addListener(SerialPortEventListener listener) throws TooManyListeners {
 
         try {
         	
